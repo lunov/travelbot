@@ -215,16 +215,15 @@ def final(update: Update, context: CallbackContext) -> int:
 def webhook():
     if request.method == 'POST':
         try:
-            json_data = request.get_json()
-            update = Update.de_json(json_data, updater.bot)
+            update = Update.de_json(request.get_json(), updater.bot)
             dp.process_update(update)
-            logger.info("Update processed successfully")
+            logger.info("Сообщение обработано успешно")
             return 'ok', 200
         except Exception as e:
-            logger.error(f"Error processing update: {e}")
-            return 'error', 200
+            logger.error(f"Ошибка: {str(e)}")
+            return 'ok', 200  # Всегда возвращаем 200 для Telegram
     
-    return "This is Telegram bot webhook. Please use POST.", 200
+    return "Используйте POST для вебхука", 200
 
 @app.route('/')
 def index():
