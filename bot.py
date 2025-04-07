@@ -1,14 +1,14 @@
 import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
     ConversationHandler,
-    filters,
-    MessageHandler
+    MessageHandler,
+    filters
 )
 
 # Настройка логирования
@@ -18,12 +18,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Константы для состояний
-(MAIN_MENU, ROUTE_CHOICE, ZASLAVL, 
- STATION_BELARUS, MLYN, SOBOR, KOSTEL, FINAL) = range(8)
+# Состояния диалога
+MAIN_MENU, ROUTE_CHOICE = range(2)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обработчик команды /start"""
+    """Начало взаимодействия - команда /start"""
+    if not update.message:
+        await update.callback_query.answer()
+        return MAIN_MENU
+        
     keyboard = [[InlineKeyboardButton("Выбор маршрута", callback_data='route_choice')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -33,10 +36,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return MAIN_MENU
 
-async def handle_route_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def route_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик выбора маршрута"""
     query = update.callback_query
-    await query.answer()  # Важно: всегда отвечаем на callback_query
+    await query.answer()  # Обязательно отвечаем на callback
     
     keyboard = [
         [InlineKeyboardButton("Заславль", callback_data='zaslavl')],
@@ -60,40 +63,56 @@ async def handle_zaslavl(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         text="Вы выбрали маршрут по Заславлю!",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Начать", callback_data='start_route')]])
     )
-    return ZASLAVL
+    return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик отмены"""
-    await update.message.reply_text("Действие отменено")
+    if update.message:
+        await update.message.reply_text("Действие отменено")
+    elif update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text("Действие отменено")
     return ConversationHandler.END
 
-def main():
-    """Настройка и запуск бота"""
-    application = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик ошибок"""
+    logger.error(f'Ошибка: {context.error}', exc_info=context.error)
+    if update.callback_query:
+        await update.callback_query.answer("Произошла ошибка, попробуйте позже")
+
+def main() -> None:
+    """Запуск бота"""
+    # Убедитесь, что токен установлен
+    token = os.getenv('TELEGRAM_TOKEN')
+    if not token:
+        raise ValueError("Не указан TELEGRAM_TOKEN")
     
+    # Создаем Application
+    application = Application.builder().token(token).build()
+    
+    # Настраиваем обработчики
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [
-                CallbackQueryHandler(handle_route_choice, pattern='^route_choice$')
+                CallbackQueryHandler(route_choice, pattern='^route_choice$')
             ],
             ROUTE_CHOICE: [
                 CallbackQueryHandler(handle_zaslavl, pattern='^zaslavl$'),
-                CallbackQueryHandler(handle_route_choice, pattern='^back$')
-            ],
-            ZASLAVL: [
-                CallbackQueryHandler(start, pattern='^start_route$')
+                CallbackQueryHandler(cancel, pattern='^cancel$')
             ]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         per_message=False
     )
     
+    # Добавляем обработчики
     application.add_handler(conv_handler)
-    application.add_error_handler(lambda u, c: logger.error(c.error))
+    application.add_error_handler(error_handler)
     
+    # Запускаем бота
     logger.info("Бот запущен в режиме polling...")
-    application.run_polling()
+    application.run_polling(drop_pending_updates=True)  # Важно для избежания конфликтов
 
 if __name__ == '__main__':
     main()
