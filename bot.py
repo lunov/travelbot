@@ -25,12 +25,12 @@ MAIN_MENU, ROUTE_CHOICE, ZASLAVL, STATION_BELARUS, MLYN, SOBOR, KOSTEL, FINAL = 
 app = Flask(__name__)
 
 # Конфигурация
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+TOKEN = os.getenv('8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE')
 PORT = int(os.environ.get('PORT', 5000))
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 
 # Инициализация бота
-updater = Updater(TOKEN, use_context=True)
+updater = Updater(8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE, use_context=True)
 dp = updater.dispatcher
 
 # ========== ОБРАБОТЧИКИ КОМАНД ========== #
