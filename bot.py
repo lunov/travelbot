@@ -232,6 +232,7 @@ def set_webhook():
 def setup_dispatcher():
     """Настройка обработчиков"""
     conv_handler = ConversationHandler(
+        per_message=True,
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [CallbackQueryHandler(route_choice, pattern='^route_choice$')],
