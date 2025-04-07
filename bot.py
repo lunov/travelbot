@@ -27,9 +27,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Конфигурация
-TOKEN = os.getenv('TELEGRAM_TOKEN', '8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE')
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+if not TOKEN:
+    raise ValueError("Не задан TELEGRAM_TOKEN в переменных окружения")
+
 PORT = int(os.environ.get('PORT', 8000))
-WEBHOOK_URL = os.getenv('https://independent-trust.up.railway.app', '')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL', 'https://independent-trust.up.railway.app')
 
 # Инициализация бота
 updater = Updater(TOKEN, use_context=True)
@@ -208,29 +211,36 @@ def final(update: Update, context: CallbackContext) -> int:
 
 # ========== WEBHOOK И ЗАПУСК ========== #
 
-@app.route('/webhook', methods=['POST'])
+@app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
-    update = Update.de_json(request.get_json(), updater.bot)
-    dp.process_update(update)
-    return 'ok', 200
+    if request.method == 'POST':
+        try:
+            json_data = request.get_json()
+            update = Update.de_json(json_data, updater.bot)
+            dp.process_update(update)
+            logger.info("Update processed successfully")
+            return 'ok', 200
+        except Exception as e:
+            logger.error(f"Error processing update: {e}")
+            return 'error', 200
+    
+    return "This is Telegram bot webhook. Please use POST.", 200
 
 @app.route('/')
 def index():
-    """Проверка работоспособности"""
-    return "Бот работает!", 200
+    return "Bot is running!", 200
 
-@app.route('/set_webhook')
+@app.route('/set_webhook', methods=['GET'])
 def set_webhook():
-    """Установка вебхука"""
-    if WEBHOOK_URL:
+    try:
         updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-        return "Webhook установлен!", 200
-    return "WEBHOOK_URL не задан", 400
+        return f"Webhook set to {WEBHOOK_URL}/webhook", 200
+    except Exception as e:
+        return f"Error setting webhook: {str(e)}", 500
 
 def setup_dispatcher():
-    """Настройка обработчиков"""
     conv_handler = ConversationHandler(
-        per_message=True,
+        per_message=False,  # Изменено на False для совместимости
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [CallbackQueryHandler(route_choice, pattern='^route_choice$')],
@@ -273,8 +283,12 @@ if __name__ == '__main__':
     setup_dispatcher()
     
     # Установка вебхука при запуске
-    if WEBHOOK_URL:
+    try:
         updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+        logger.info(f"Webhook set to {WEBHOOK_URL}/webhook")
+    except Exception as e:
+        logger.error(f"Error setting webhook: {e}")
     
     # Запуск production-сервера
+    logger.info("Starting server...")
     serve(app, host="0.0.0.0", port=PORT)
