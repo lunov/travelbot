@@ -10,6 +10,7 @@ from telegram.ext import (
     Dispatcher
 )
 from flask import Flask, request
+from waitress import serve
 
 # Настройка логирования
 logging.basicConfig(
@@ -19,18 +20,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Константы для состояний
-MAIN_MENU, ROUTE_CHOICE, ZASLAVL, STATION_BELARUS, MLYN, SOBOR, KOSTEL, FINAL = range(8)
+(MAIN_MENU, ROUTE_CHOICE, ZASLAVL, 
+ STATION_BELARUS, MLYN, SOBOR, KOSTEL, FINAL) = range(8)
 
 # Инициализация Flask
 app = Flask(__name__)
 
 # Конфигурация
-TOKEN = os.getenv('8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE')
-PORT = int(os.environ.get('PORT', 5000))
+TOKEN = os.getenv('TELEGRAM_TOKEN', '8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE')
+PORT = int(os.environ.get('PORT', 8000))
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 
 # Инициализация бота
-updater = Updater(8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE, use_context=True)
+updater = Updater(TOKEN, use_context=True)
 dp = updater.dispatcher
 
 # ========== ОБРАБОТЧИКИ КОМАНД ========== #
@@ -219,6 +221,14 @@ def index():
     """Проверка работоспособности"""
     return "Бот работает!", 200
 
+@app.route('/set_webhook')
+def set_webhook():
+    """Установка вебхука"""
+    if WEBHOOK_URL:
+        updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+        return "Webhook установлен!", 200
+    return "WEBHOOK_URL не задан", 400
+
 def setup_dispatcher():
     """Настройка обработчиков"""
     conv_handler = ConversationHandler(
@@ -263,9 +273,9 @@ def setup_dispatcher():
 if __name__ == '__main__':
     setup_dispatcher()
     
-    # Установка вебхука
+    # Установка вебхука при запуске
     if WEBHOOK_URL:
         updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     
-    # Запуск Flask
-    app.run(host='0.0.0.0', port=PORT)
+    # Запуск production-сервера
+    serve(app, host="0.0.0.0", port=PORT)
