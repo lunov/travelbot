@@ -29,7 +29,7 @@ app = Flask(__name__)
 # Конфигурация
 TOKEN = os.getenv('TELEGRAM_TOKEN', '8163443354:AAEZSEK2YeRwCfOwlZ-wmfDnVFRwO3h6VmE')
 PORT = int(os.environ.get('PORT', 8000))
-WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
+WEBHOOK_URL = os.getenv('https://independent-trust.up.railway.app', '')
 
 # Инициализация бота
 updater = Updater(TOKEN, use_context=True)
