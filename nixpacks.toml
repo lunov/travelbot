@@ -1,19 +1,21 @@
 [phases.setup]
 nixPkgs = [
   "python310",
-  "python310Packages.virtualenv"  # Добавляем virtualenv
+  "python310Packages.pip",
+  "python310Packages.virtualenv"
 ]
 
 [phases.install]
 commands = [
-  # Создаем виртуальное окружение
-  "python -m venv /app/venv",
-  # Активируем и устанавливаем зависимости
-  "source /app/venv/bin/activate && pip install -r requirements.txt",
+  # Создаем виртуальное окружение в допустимой директории
+  "python -m venv /tmp/venv",
+  # Устанавливаем пакеты через venv
+  "/tmp/venv/bin/pip install -r requirements.txt",
   
-  # Альтернативный вариант без venv (если предыдущий не работает)
-  "PYTHONPATH=/app pip install --prefix=/app -r requirements.txt"
+  # Копируем установленные пакеты в рабочую директорию
+  "mkdir -p /app/.local-python",
+  "cp -r /tmp/venv/lib/python3.10/site-packages/* /app/.local-python/"
 ]
 
 [start]
-cmd = "python bot.py"
+cmd = "PYTHONPATH=/app/.local-python python bot.py"
