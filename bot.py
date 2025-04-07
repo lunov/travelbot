@@ -7,7 +7,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     CallbackContext,
     ConversationHandler,
-    Filters,
+    filters,  # Заменяем Filters на filters
     MessageHandler
 )
 
