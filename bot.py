@@ -2,10 +2,10 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import (
-    Application,  # Заменяем Updater на Application
+    Application,
     CommandHandler,
     CallbackQueryHandler,
-    ContextTypes,  # Заменяем CallbackContext
+    ContextTypes,
     ConversationHandler,
     filters,
     MessageHandler
@@ -238,22 +238,22 @@ def setup_handlers(application):
             ]
         },
         fallbacks=[CommandHandler('start', start)],
+        per_message=True  # Добавлено для устранения предупреждения
     )
 
     application.add_handler(conv_handler)
     application.add_error_handler(error_handler)
 
-async def main():
+def main():
     """Запуск бота"""
-    application = Application.builder().token(TOKEN).build()  # Новый стиль инициализации
+    application = Application.builder().token(TOKEN).build()
     
     # Настройка обработчиков
     setup_handlers(application)
 
     # Запуск long polling
     logger.info("Бот запущен в режиме polling...")
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    main()
