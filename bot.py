@@ -2,12 +2,12 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import (
-    Updater,
+    Application,  # Заменяем Updater на Application
     CommandHandler,
     CallbackQueryHandler,
-    CallbackContext,
+    ContextTypes,  # Заменяем CallbackContext
     ConversationHandler,
-    filters,  # Заменяем Filters на filters
+    filters,
     MessageHandler
 )
 
@@ -27,7 +27,7 @@ TOKEN = os.getenv('TELEGRAM_TOKEN')
 if not TOKEN:
     raise ValueError("Токен бота не указан в переменных окружения!")
 
-def start(update: Update, context: CallbackContext) -> int:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик команды /start"""
     photo_url = 'https://img.goodfon.com/original/2388x1668/a/44/sputnik-1-1957-sputnik-1.jpg'
     caption = "Вітаем у боце «Спадарожнік»! Гэты бот дапаможа вам адкрыць для сябе цікавыя маршруты."
@@ -35,17 +35,17 @@ def start(update: Update, context: CallbackContext) -> int:
     keyboard = [[InlineKeyboardButton("Выбор маршрута", callback_data='route_choice')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    update.message.reply_photo(
+    await update.message.reply_photo(
         photo=photo_url,
         caption=caption,
         reply_markup=reply_markup
     )
     return MAIN_MENU
 
-def route_choice(update: Update, context: CallbackContext) -> int:
+async def route_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик выбора маршрута"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     text = "Выберыце маршрут, каб даведацца больш:"
     keyboard = [
@@ -55,38 +55,38 @@ def route_choice(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(text=text, reply_markup=reply_markup)
+    await query.edit_message_text(text=text, reply_markup=reply_markup)
     return ROUTE_CHOICE
 
-def route_in_development(update: Update, context: CallbackContext) -> int:
+async def route_in_development(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Обработчик для маршрутов в разработке"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     text = "Извините, маршруты в разработке."
     keyboard = [[InlineKeyboardButton("Назад", callback_data='back_to_routes')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(text=text, reply_markup=reply_markup)
+    await query.edit_message_text(text=text, reply_markup=reply_markup)
     return ROUTE_CHOICE
 
-def zaslavl_info(update: Update, context: CallbackContext) -> int:
+async def zaslavl_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Информация о маршруте Заславль"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     text = ("Маршрут «Заславль»:\n\n"
             "Горад-музей пад адкрытым небам з багатай гісторыяй і цікавымі помнікамі архітэктуры.")
     keyboard = [[InlineKeyboardButton("Пачаць", callback_data='station_belarus')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(text=text, reply_markup=reply_markup)
+    await query.edit_message_text(text=text, reply_markup=reply_markup)
     return ZASLAVL
 
-def station_belarus(update: Update, context: CallbackContext) -> int:
+async def station_belarus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Станция Беларусь"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     media = [InputMediaPhoto(
         'https://avatars.mds.yandex.net/get-altay/4546519/2a0000017c5b6f2b03411f81c36c607e2985/XXXL',
@@ -98,17 +98,17 @@ def station_belarus(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_media_group(media=media)
-    query.message.reply_text(
+    await query.message.reply_media_group(media=media)
+    await query.message.reply_text(
         text="Станцыя «Беларусь» - пачатак вашага маршруту.",
         reply_markup=reply_markup
     )
     return STATION_BELARUS
 
-def mlyn(update: Update, context: CallbackContext) -> int:
+async def mlyn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Млын"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     media = [InputMediaPhoto(
         'https://photocentra.ru/images/main77/771668_main.jpg',
@@ -121,17 +121,17 @@ def mlyn(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_media_group(media=media)
-    query.message.reply_text(
+    await query.message.reply_media_group(media=media)
+    await query.message.reply_text(
         text="Млын - цікавы помнік індустрыяльнай архітэктуры Заслаўля.",
         reply_markup=reply_markup
     )
     return MLYN
 
-def sobor(update: Update, context: CallbackContext) -> int:
+async def sobor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Собор"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     media = [InputMediaPhoto(
         'https://azbyka.ru/palomnik/images/b/b7/Преображенская_церковь_заславль1.jpg',
@@ -144,17 +144,17 @@ def sobor(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_media_group(media=media)
-    query.message.reply_text(
+    await query.message.reply_media_group(media=media)
+    await query.message.reply_text(
         text="Спаса-Праабражэнскі сабор - цэнтр духоўнага жыцця Заслаўля.",
         reply_markup=reply_markup
     )
     return SOBOR
 
-def kostel(update: Update, context: CallbackContext) -> int:
+async def kostel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Костёл"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     media = [InputMediaPhoto(
         'https://belarustut.by/wp-content/uploads/slider52/2-min.jpeg',
@@ -167,17 +167,17 @@ def kostel(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_media_group(media=media)
-    query.message.reply_text(
+    await query.message.reply_media_group(media=media)
+    await query.message.reply_text(
         text="Касцёл Ражства Дзевы Марыі - помнік архітэктуры XVI стагоддзя.",
         reply_markup=reply_markup
     )
     return KOSTEL
 
-def final(update: Update, context: CallbackContext) -> int:
+async def final(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Завершение маршрута"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     media = [InputMediaPhoto(
         'https://avatars.mds.yandex.net/get-altay/1246719/2a000001642aaf3789301a7bd185a8c7256c/XXL_height',
@@ -189,18 +189,18 @@ def final(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.message.reply_media_group(media=media)
-    query.message.reply_text(
+    await query.message.reply_media_group(media=media)
+    await query.message.reply_text(
         text="Дзякуем, што абралі маршрут «Заславль»! Спадзяемся, вам спадабалася.",
         reply_markup=reply_markup
     )
     return FINAL
 
-def error_handler(update: Update, context: CallbackContext):
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик ошибок"""
     logger.error(f'Ошибка в обработчике: {context.error}', exc_info=context.error)
 
-def setup_dispatcher(dispatcher):
+def setup_handlers(application):
     """Настройка обработчиков"""
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -240,21 +240,20 @@ def setup_dispatcher(dispatcher):
         fallbacks=[CommandHandler('start', start)],
     )
 
-    dispatcher.add_handler(conv_handler)
-    dispatcher.add_error_handler(error_handler)
+    application.add_handler(conv_handler)
+    application.add_error_handler(error_handler)
 
-def main():
+async def main():
     """Запуск бота"""
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
+    application = Application.builder().token(TOKEN).build()  # Новый стиль инициализации
+    
     # Настройка обработчиков
-    setup_dispatcher(dp)
+    setup_handlers(application)
 
     # Запуск long polling
     logger.info("Бот запущен в режиме polling...")
-    updater.start_polling()
-    updater.idle()
+    await application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
