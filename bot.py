@@ -38,6 +38,31 @@ WEBHOOK_URL = os.getenv('WEBHOOK_URL', 'https://independent-trust.up.railway.app
 updater = Updater(TOKEN, use_context=True)
 dp = updater.dispatcher
 
+def setup_webhook():
+    """Принудительная установка вебхука при запуске"""
+    try:
+        # Удаляем старый вебхук
+        updater.bot.delete_webhook()
+        
+        # Устанавливаем новый вебхук
+        webhook_url = f"{WEBHOOK_URL}/webhook"
+        success = updater.bot.set_webhook(
+            url=webhook_url,
+            max_connections=40,
+            drop_pending_updates=True
+        )
+        
+        if success:
+            logger.info(f"✅ Вебхук установлен: {webhook_url}")
+            webhook_info = updater.bot.get_webhook_info()
+            logger.info(f"ℹ️ Статус вебхука: {webhook_info}")
+        else:
+            logger.error("❌ Не удалось установить вебхук")
+            
+    except Exception as e:
+        logger.critical(f"🔥 Ошибка при настройке вебхука: {str(e)}")
+        raise
+
 # ========== ОБРАБОТЧИКИ КОМАНД ========== #
 
 def start(update: Update, context: CallbackContext) -> int:
@@ -215,31 +240,30 @@ def final(update: Update, context: CallbackContext) -> int:
 def webhook():
     if request.method == 'POST':
         try:
-            update = Update.de_json(request.get_json(), updater.bot)
+            json_data = request.get_json()
+            update = Update.de_json(json_data, updater.bot)
             dp.process_update(update)
-            logger.info("Сообщение обработано успешно")
+            logger.info("✅ Сообщение обработано")
             return 'ok', 200
         except Exception as e:
-            logger.error(f"Ошибка: {str(e)}")
-            return 'ok', 200  # Всегда возвращаем 200 для Telegram
+            logger.error(f"❌ Ошибка обработки: {str(e)}")
+            return 'error', 200
     
-    return "Используйте POST для вебхука", 200
+    return "Используйте POST для Telegram webhook", 200
 
 @app.route('/')
 def index():
-    return "Bot is running!", 200
+    return f"Бот работает! Вебхук: {WEBHOOK_URL}/webhook", 200
 
-@app.route('/set_webhook', methods=['GET'])
-def set_webhook():
-    try:
-        updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-        return f"Webhook set to {WEBHOOK_URL}/webhook", 200
-    except Exception as e:
-        return f"Error setting webhook: {str(e)}", 500
+@app.route('/set_webhook')
+def set_webhook_route():
+    """Ручная установка вебхука через браузер"""
+    setup_webhook()
+    return "Вебхук установлен", 200
 
 def setup_dispatcher():
+    """Настройка обработчиков"""
     conv_handler = ConversationHandler(
-        per_message=False,  # Изменено на False для совместимости
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [CallbackQueryHandler(route_choice, pattern='^route_choice$')],
@@ -279,15 +303,12 @@ def setup_dispatcher():
     dp.add_handler(conv_handler)
 
 if __name__ == '__main__':
+    # Настройка обработчиков
     setup_dispatcher()
     
-    # Установка вебхука при запуске
-    try:
-        updater.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-        logger.info(f"Webhook set to {WEBHOOK_URL}/webhook")
-    except Exception as e:
-        logger.error(f"Error setting webhook: {e}")
+    # Установка вебхука
+    setup_webhook()
     
-    # Запуск production-сервера
-    logger.info("Starting server...")
+    # Запуск сервера
+    logger.info(f"🚀 Сервер запущен на порту {PORT}")
     serve(app, host="0.0.0.0", port=PORT)
