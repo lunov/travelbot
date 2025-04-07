@@ -210,11 +210,9 @@ def final(update: Update, context: CallbackContext) -> int:
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    """Эндпоинт для вебхука Telegram"""
-    if request.method == "POST":
-        update = Update.de_json(request.get_json(), updater.bot)
-        dp.process_update(update)
-    return "ok", 200
+    update = Update.de_json(request.get_json(), updater.bot)
+    dp.process_update(update)
+    return 'ok', 200
 
 @app.route('/')
 def index():
