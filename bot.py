@@ -238,7 +238,7 @@ def setup_handlers(application):
             ]
         },
         fallbacks=[CommandHandler('start', start)],
-        per_message=True  # Добавлено для устранения предупреждения
+        per_message=False  # Установлено в False, так как у нас есть CommandHandler
     )
 
     application.add_handler(conv_handler)
