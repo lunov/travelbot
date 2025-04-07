@@ -7,10 +7,9 @@ from telegram.ext import (
     CallbackQueryHandler,
     CallbackContext,
     ConversationHandler,
-    Dispatcher
+    Filters,
+    MessageHandler
 )
-from flask import Flask, request
-from waitress import serve
 
 # Настройка логирования
 logging.basicConfig(
@@ -23,47 +22,10 @@ logger = logging.getLogger(__name__)
 (MAIN_MENU, ROUTE_CHOICE, ZASLAVL, 
  STATION_BELARUS, MLYN, SOBOR, KOSTEL, FINAL) = range(8)
 
-# Инициализация Flask
-app = Flask(__name__)
-
 # Конфигурация
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 if not TOKEN:
-    raise ValueError("Не задан TELEGRAM_TOKEN в переменных окружения")
-
-PORT = int(os.environ.get('PORT', 8000))
-WEBHOOK_URL = os.getenv('WEBHOOK_URL', 'https://independent-trust.up.railway.app')
-
-# Инициализация бота
-updater = Updater(TOKEN, use_context=True)
-dp = updater.dispatcher
-
-def setup_webhook():
-    """Принудительная установка вебхука при запуске"""
-    try:
-        # Удаляем старый вебхук
-        updater.bot.delete_webhook()
-        
-        # Устанавливаем новый вебхук
-        webhook_url = f"{WEBHOOK_URL}/webhook"
-        success = updater.bot.set_webhook(
-            url=webhook_url,
-            max_connections=40,
-            drop_pending_updates=True
-        )
-        
-        if success:
-            logger.info(f"✅ Вебхук установлен: {webhook_url}")
-            webhook_info = updater.bot.get_webhook_info()
-            logger.info(f"ℹ️ Статус вебхука: {webhook_info}")
-        else:
-            logger.error("❌ Не удалось установить вебхук")
-            
-    except Exception as e:
-        logger.critical(f"🔥 Ошибка при настройке вебхука: {str(e)}")
-        raise
-
-# ========== ОБРАБОТЧИКИ КОМАНД ========== #
+    raise ValueError("Токен бота не указан в переменных окружения!")
 
 def start(update: Update, context: CallbackContext) -> int:
     """Обработчик команды /start"""
@@ -234,34 +196,11 @@ def final(update: Update, context: CallbackContext) -> int:
     )
     return FINAL
 
-# ========== WEBHOOK И ЗАПУСК ========== #
+def error_handler(update: Update, context: CallbackContext):
+    """Обработчик ошибок"""
+    logger.error(f'Ошибка в обработчике: {context.error}', exc_info=context.error)
 
-@app.route('/webhook', methods=['GET', 'POST'])
-def webhook():
-    if request.method == 'POST':
-        try:
-            json_data = request.get_json()
-            update = Update.de_json(json_data, updater.bot)
-            dp.process_update(update)
-            logger.info("✅ Сообщение обработано")
-            return 'ok', 200
-        except Exception as e:
-            logger.error(f"❌ Ошибка обработки: {str(e)}")
-            return 'error', 200
-    
-    return "Используйте POST для Telegram webhook", 200
-
-@app.route('/')
-def index():
-    return f"Бот работает! Вебхук: {WEBHOOK_URL}/webhook", 200
-
-@app.route('/set_webhook')
-def set_webhook_route():
-    """Ручная установка вебхука через браузер"""
-    setup_webhook()
-    return "Вебхук установлен", 200
-
-def setup_dispatcher():
+def setup_dispatcher(dispatcher):
     """Настройка обработчиков"""
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -300,15 +239,22 @@ def setup_dispatcher():
         },
         fallbacks=[CommandHandler('start', start)],
     )
-    dp.add_handler(conv_handler)
+
+    dispatcher.add_handler(conv_handler)
+    dispatcher.add_error_handler(error_handler)
+
+def main():
+    """Запуск бота"""
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    # Настройка обработчиков
+    setup_dispatcher(dp)
+
+    # Запуск long polling
+    logger.info("Бот запущен в режиме polling...")
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
-    # Настройка обработчиков
-    setup_dispatcher()
-    
-    # Установка вебхука
-    setup_webhook()
-    
-    # Запуск сервера
-    logger.info(f"🚀 Сервер запущен на порту {PORT}")
-    serve(app, host="0.0.0.0", port=PORT)
+    main()
